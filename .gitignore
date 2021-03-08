@@ -1,0 +1,10 @@
+.DS_Store
+
+.idea
+build
+.terraform
+.terraform.lock.hcl
+# .terraformrc
+terraform.tfstate
+terraform-logs.log
+examples/_setup/setup_env.sh
