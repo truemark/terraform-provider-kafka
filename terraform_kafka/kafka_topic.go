@@ -5,10 +5,9 @@ import (
 	// clientapi "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	sarama "gopkg.in/Shopify/sarama.v2"
+	sarama "github.com/Shopify/sarama"
 )
 
 // ### ./bin/kafka-topics.sh

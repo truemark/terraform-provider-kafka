@@ -3,10 +3,9 @@ package kafka_topic
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-sdk/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	sarama "github.com/Shopify/sarama"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	sarama "gopkg.in/Shopify/sarama.v2"
 )
 
 func Provider() *schema.Provider {
