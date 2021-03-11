@@ -4,7 +4,12 @@ import (
 
 	// clientapi "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"context"
+	"errors"
+
+	sarama "github.com/Shopify/sarama"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -180,57 +185,59 @@ import (
 // true due to mutual certificate authentication being used then it is necessary
 // to explicitly specify -- authorizer-properties zookeeper.set.acl=true
 
-
-
 func ACLCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	principle := d.Get("principle")
-	host := d.Get("host")
-	operation_str := d.Get("operation")
-	permission_type_str := d.Get("permission")
-	resource := d.Get("resource").(map[string]interface{})
 
-	operation := operationToOpCode(operation_str)
-	permission := permissionToOpCode(permission_type_str)
-	
+	brokers := d.Get("bootstrap_servers").([]string)
+
+	// principle := d.Get("principle")
+	host := d.Get("host").(string)
+	operationStr := d.Get("operation").(string)
+	permissionTypeStr := d.Get("permission").(string)
+	resource := d.Get("resource").(map[string]interface{})
 	resourceTypeStr := resource["resource_type"].(string)
 	resourceName := resource["resource_name"].(string)
 	resourcePatternTypeStr := resource["resource_pattern_type"].(string)
 
+	operation, err := operationToOpCode(operationStr)
+	permission, err := permissionToOpCode(permissionTypeStr)
+
+	resourceOp, err := resourceToOpCode(resourceTypeStr)
+	patternOp, err := resourcePatternToOpCode(resourcePatternTypeStr)
 	// r := Resource{ResourceType: AclResourceTopic, ResourceName: "my_topic"}
 	// a := Acl{Host: "localhost", Operation: AclOperationAlter, PermissionType: AclPermissionAny}
 
-	resourceStruct := Resource{
-		ResourceType: resourceToOpCode(resourceTypeStr),
-		ResourceName: resourceName, 
-		ResourcePatternType: resourcePatternToOpCode(resourcePatternTypeStr),
+	resourceStruct := sarama.Resource{
+		ResourceType:        sarama.AclResourceType(resourceOp),
+		ResourceName:        resourceName,
+		ResourcePatternType: sarama.AclResourcePatternType(patternOp),
 	}
-	aclStruct := Acl {
-		Host: host, 
-		Operation: operation, 
-		PermissionType: permission,
+	aclStruct := sarama.Acl{
+		Host:           host,
+		Operation:      sarama.AclOperation(operation),
+		PermissionType: sarama.AclPermissionType(permission),
 	}
 
 	config := sarama.NewConfig()
-	client := sarama.NewClient(config)
-	clusterAdmin := sarama.NewClusterAdminFromClient(client)
-
-	err := clusterAdmin.CreateAcl(resourceStruct, aclStruct)
+	client, err := sarama.NewClient(brokers, config)
+	clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+	err = clusterAdmin.CreateACL(resourceStruct, aclStruct)
 	if err != nil {
-		t.Fatal(err)
+		// t.Fatal(err)
+	}
+	err = clusterAdmin.Close()
+	if err != nil {
+		// t.Fatal(err)
 	}
 
-	err = admin.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
+	return nil
 }
 
 func ACLRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
+	return nil
 }
 
 func ACLDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
+	return nil
 }
 
 func ResourceKafkaACL() *schema.Resource {
@@ -254,166 +261,182 @@ func ResourceKafkaACL() *schema.Resource {
 				ForceNew: true,
 			},
 			"operation": {
-				Type: 	  schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
 				ValidateFunc: ValidateOperationType,
 			},
 			"permission": {
-				Type: 	  schema.TypeString,
-				Required: true,
-				ForceNew: true,	
-				ValidateFune: ValidatePermissionType,
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: ValidatePermissionType,
 			},
 			"resource": {
-				Type: schema.TypeSet,
+				Type:     schema.TypeSet,
 				Required: true,
 				ForceNew: true,
-				ValidateFunc: ValidateResource,
+				// ValidateFunc: ValidateResource,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"resource_type": {
-							Type: schema.TypeString,
+							Type:         schema.TypeString,
+							Required:     true,
+							ForceNew:     true,
+							ValidateFunc: ValidateResourceType,
+						},
+						"resource_name": {
+							Type:     schema.TypeString,
 							Required: true,
 							ForceNew: true,
-							ValidateFunc: ValidateResourceType,
-						},        
-						"resource_name": {
-							Type: schema.TypeString,
-							Required: true, 
-							ForceNew: true,
-						},        
+						},
 						"resource_pattern_type": {
-							Type: schema.TypeString,
-							Required: true, 
-							ForceNew: true,
-							ValidateFunc: ValidateResourcePatternType
-						}, 
+							Type:         schema.TypeString,
+							Required:     true,
+							ForceNew:     true,
+							ValidateFunc: ValidateResourcePatternType,
+						},
 					},
 				},
 			},
-		}
+		},
 	}
 }
 
 func ValidateOperationType(val interface{}, key string) (warns []string, errs []error) {
-	validOperations := ["unknown", "any", "all", "read", "write", "create", "delete",
-	 					"alter", "describe", "cluster_action", "describe_configs", 
-						"alter_configs", "idempotent_write"]
+	validOperations := []string{
+		"unknown",
+		"any",
+		"all",
+		"read",
+		"write",
+		"create",
+		"delete",
+		"alter",
+		"describe",
+		"cluster_action",
+		"describe_configs",
+		"alter_configs",
+		"idempotent_write"}
 	for _, operation := range validOperations {
 		if val == operation {
 			return nil, nil
 		}
 	}
-	return ["Error: operation.type value is incorrect. Must be one of [\"unknown\", \"any\", \"all\", \"read\", \"write\", \"create\", \"delete\", \"alter\", \"describe\", \"cluster_action\", \"describe_configs\", \"alter_configs\", \"idempotent_write\"]"], nil
+	return []string{"Error: operation.type value is incorrect. Must be one of [unknown, any, \"all\", \"read\", \"write\", \"create\", \"delete\", \"alter\", \"describe\", \"cluster_action\", \"describe_configs\", \"alter_configs\", \"idempotent_write\"]"}, []error{nil}
 }
 
 func ValidatePermissionType(val interface{}, key string) (warns []string, errs []error) {
-	permissionTypes := ["unknown", "any", "deny", "allow"]
-	for _, permission := range validPermissions {
+	permissionTypes := []string{"unknown", "any", "deny", "allow"}
+	for _, permission := range permissionTypes {
 		if val == permission {
 			return nil, nil
 		}
 	}
-	return ["Error: permission.type value is incorrect. Must be one of [\"unknown\", \"any\", \"deny\", \"allow\"]"], nil
+	return []string{"Error: permission.type value is incorrect. Must be one of [\"unknown\", \"any\", \"deny\", \"allow\"]"}, []error{nil}
 }
 
 func ValidateResourceType(val interface{}, key string) (warns []string, errs []error) {
-	validResourceTypes := ["unknown", "any", "topic", "group",
-						   "cluster", "transaction_id", "delegation_token"]
+	validResourceTypes := []string{"unknown", "any", "topic", "group",
+		"cluster", "transaction_id", "delegation_token"}
 
 	for _, resource := range validResourceTypes {
 		if val == resource {
 			return nil, nil
 		}
 	}
-	return ["Error: resource.type value is incorrect. Must be one of [\"unknown\", \"any\", \"topic\", \"group\", \"cluster\", \"transaction_id\", \"delegation_token\"]"], nil
+	return []string{"Error: resource.type value is incorrect. Must be one of [\"unknown\", \"any\", \"topic\", \"group\", \"cluster\", \"transaction_id\", \"delegation_token\"]"}, []error{nil}
 }
 
 func ValidateResourcePatternType(val interface{}, key string) (warns []string, errs []error) {
-	validResourcePatternTypes := ["unknown", "any", "match", "literal", "prefixed"]
+	validResourcePatternTypes := []string{"unknown", "any", "match", "literal", "prefixed"}
 	for _, resourcePattern := range validResourcePatternTypes {
 		if val == resourcePattern {
 			return nil, nil
 		}
 	}
-	return ["Error: resource.pattern.type value is incorrect. Must be one of [\"unknown\", \"any\", \"match\", \"literal\", \"prefixed\"]"], nil	
+	return []string{"Error: resource.pattern.type value is incorrect. Must be one of [\"unknown\", \"any\", \"match\", \"literal\", \"prefixed\"]"}, []error{nil}
 }
 
-func operationToOpCode(operation string) int {
+func operationToOpCode(operation string) (int, error) {
 	switch operation {
 	case "unknown":
-		return 0
+		return 0, nil
 	case "any":
-		return 1
-	case "all": 
-		return 2
+		return 1, nil
+	case "all":
+		return 2, nil
 	case "read":
-		return 3 
+		return 3, nil
 	case "write":
-		return 4 
+		return 4, nil
 	case "create":
-		return 5 
+		return 5, nil
 	case "delete":
-		return 6
+		return 6, nil
 	case "alter":
-		return 7
+		return 7, nil
 	case "describe":
-		return 8
+		return 8, nil
 	case "cluster_action":
-		return 9
+		return 9, nil
 	case "describe_configs":
-		return 10 
+		return 10, nil
 	case "alter_configs":
-		return 11
+		return 11, nil
 	case "idempotent_write":
-		return 12
+		return 12, nil
 	}
+
+	return -1, errors.New("Unable to locate operation code")
 }
 
-func permissionToOpCode(permission string) int {
+func permissionToOpCode(permission string) (int, error) {
 	switch permission {
 	case "unknown":
-		return 0
+		return 0, nil
 	case "any":
-		return 1
+		return 1, nil
 	case "deny":
-		return 2
+		return 2, nil
 	case "allow":
-		return 3
+		return 3, nil
 	}
+	return -1, errors.New("Unable to locate permission code")
 }
 
-func resourceToOpCode(resource string) int {
+func resourceToOpCode(resource string) (int, error) {
 	switch resource {
-		case "unknown":
-			return 0
-		case "any":
-			return 1
-		case "topic":
-			return 2
-		case "group":
-			return 3
-		case "cluster":
-			return 4
-		case "transaction_id":
-			return 5
-		case "delegation_token":
-			return 6
+	case "unknown":
+		return 0, nil
+	case "any":
+		return 1, nil
+	case "topic":
+		return 2, nil
+	case "group":
+		return 3, nil
+	case "cluster":
+		return 4, nil
+	case "transaction_id":
+		return 5, nil
+	case "delegation_token":
+		return 6, nil
 	}
+	return -1, errors.New("Unable to locate resource code")
 }
 
-func resourcePatternToOpCode(resourcePattern string) int {
+func resourcePatternToOpCode(resourcePattern string) (int, error) {
 	switch resourcePattern {
 	case "unknown":
-		return 0
-	case "any": 
-		return 1
+		return 0, nil
+	case "any":
+		return 1, nil
 	case "match":
-		return 2 
-	case "literal": 
-		return 3
+		return 2, nil
+	case "literal":
+		return 3, nil
 	case "prefixed":
-		return 4
+		return 4, nil
 	}
+	return -1, errors.New("Unable to locate resource code")
 }

@@ -3,7 +3,6 @@ package kafka_topic
 import (
 	"context"
 
-	sarama "github.com/Shopify/sarama"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -30,21 +29,21 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// TODO: log.Printf("[INFO] Initializing ConfluentCloud client")
 	bootstrapServers := d.Get("bootstrap_servers").(string)
 
-	config := &sarama.Config{
-		BootstrapServers:        bootstrapServers,
-		CACert:                  nil,
-		ClientCert:              nil,
-		ClientCertKey:           nil,
-		ClientCertKeyPassphrase: nil,
-		SkipTLSVerify:           nil,
-		SASLUsername:            nil,
-		SASLPassword:            nil,
-		SASLMechanism:           nil,
-		TLSEnabled:              nil,
-		Timeout:                 nil,
-	}
-
 	// err := resource.RetryContext(ctx, 30*time.Minute, func() *resource.RetryError {
 	// })
-	return config, nil // diag.FromErr(err)
+	return bootstrapServers, nil // diag.FromErr(err)
 }
+
+// config := &Config{
+// 	BootstrapServers:        bootstrapServers,
+// 	CACert:                  nil,
+// 	ClientCert:              nil,
+// 	ClientCertKey:           nil,
+// 	ClientCertKeyPassphrase: nil,
+// 	SkipTLSVerify:           nil,
+// 	SASLUsername:            nil,
+// 	SASLPassword:            nil,
+// 	SASLMechanism:           nil,
+// 	TLSEnabled:              nil,
+// 	Timeout:                 nil,
+// }

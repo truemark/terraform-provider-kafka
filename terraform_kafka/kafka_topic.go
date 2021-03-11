@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	sarama "github.com/Shopify/sarama"
 )
 
 // ### ./bin/kafka-topics.sh
@@ -143,15 +142,15 @@ import (
 //                                            given to allow fail-over.
 
 func TopicCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	config := sarama.NewConfig()
-	client := sarama.NewClient(config)
+	// config := sarama.NewConfig()
+	// client := sarama.NewClient(config)
+
 	// clusterAdmin := sarama.NewClusterAdminFromClient(client)
 	// clusterAdmin.CreateTopic()
 
-
 	// type CreateTopicsRequest struct {
 	// 	Version int16
-	
+
 	// 	TopicDetails map[string]*TopicDetail
 	// 	Timeout      time.Duration
 	// 	ValidateOnly bool
@@ -195,12 +194,12 @@ func ResourceKafkaTopic() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: true,
 				ForceNew: true,
-			} 
+			},
 			"replica_assignment": {
 				Type:     schema.TypeList,
 				Required: true,
 				ForceNew: true,
-			}
+			},
 			"config_entries": {
 				// Type: schema.TypeMap,
 				// Required: true,
@@ -211,14 +210,14 @@ func ResourceKafkaTopic() *schema.Resource {
 				ForceNew:    true,
 				Description: "",
 				Elem: &schema.Resource{
-					Schema: SchemaKafkaTopicConfigEntries()
+					Schema: SchemaKafkaTopicConfigEntries(),
 				},
-			}
-		}	
+			},
+		},
 	}
 }
 
-func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema { 
+func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		// cleanup.policy
 		// A string that is either "delete" or "compact" or both. This string designates
@@ -232,10 +231,10 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Server Default Property:		log.cleanup.policy
 		// Importance:					medium
 		"cleanup.policy": {
-			Type:        schema.TypeList,
-			Required:    false,
-			ForceNew:    true,
-			Description: "A string that is either \"delete\" or \"compact\" or both. This string designates the retention policy to use on old log segments. The default policy (\"delete\") will discard old segments when their retention time or size limit has been reached. The \"compact\" setting will enable log compaction on the topic.",
+			Type:         schema.TypeList,
+			Required:     false,
+			ForceNew:     true,
+			Description:  "A string that is either \"delete\" or \"compact\" or both. This string designates the retention policy to use on old log segments. The default policy (\"delete\") will discard old segments when their retention time or size limit has been reached. The \"compact\" setting will enable log compaction on the topic.",
 			ValidateFunc: ValidateKafkaCleanupPolicy,
 		},
 
@@ -251,10 +250,10 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Server Default Property:		compression.type
 		// Importance:					medium
 		"compression.type": {
-			Type:        schema.TypeString,
-			Required:    false,
-			ForceNew:    true,
-			Description: "Specify the final compression type for a given topic. This configuration accepts the standard compression codecs ('gzip', 'snappy', 'lz4', 'zstd'). It additionally accepts 'uncompressed' which is equivalent to no compression; and 'producer' which means retain the original compression codec set by the producer.",
+			Type:         schema.TypeString,
+			Required:     false,
+			ForceNew:     true,
+			Description:  "Specify the final compression type for a given topic. This configuration accepts the standard compression codecs ('gzip', 'snappy', 'lz4', 'zstd'). It additionally accepts 'uncompressed' which is equivalent to no compression; and 'producer' which means retain the original compression codec set by the producer.",
 			ValidateFunc: ValidateKafkaCompressionType,
 		},
 
@@ -372,9 +371,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// A list of replicas for which log replication should be throttled on the leader
 		// side. The list should describe a set of replicas in the form
 		//
-		//   [PartitionId]:[BrokerId],[PartitionId]:[BrokerId]:... 
-		// 
-		// or alternatively the wildcard '*' can be used to throttle all replicas 
+		//   [PartitionId]:[BrokerId],[PartitionId]:[BrokerId]:...
+		//
+		// or alternatively the wildcard '*' can be used to throttle all replicas
 		// for this topic.
 		//
 		// Type:					list
@@ -446,10 +445,10 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Server Default Property:		log.message.format.version
 		// Importance:					medium
 		"message.format.version": {
-			Type:        schema.TypeString,
-			Required:    false,
-			ForceNew:    true,
-			Description: "Specify the message format version the broker will use to append messages to the logs. The value should be a valid ApiVersion. Some examples are: 0.8.2, 0.9.0.0, 0.10.0, check ApiVersion for more details. By setting a particular message format version, the user is certifying that all the existing messages on disk are smaller or equal than the specified version. Setting this value incorrectly will cause consumers with older versions to break as they will receive messages with a format that they don't understand.",
+			Type:         schema.TypeString,
+			Required:     false,
+			ForceNew:     true,
+			Description:  "Specify the message format version the broker will use to append messages to the logs. The value should be a valid ApiVersion. Some examples are: 0.8.2, 0.9.0.0, 0.10.0, check ApiVersion for more details. By setting a particular message format version, the user is certifying that all the existing messages on disk are smaller or equal than the specified version. Setting this value incorrectly will cause consumers with older versions to break as they will receive messages with a format that they don't understand.",
 			ValidateFunc: ValidateMessageFormatVersion,
 		},
 
@@ -481,10 +480,10 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Server Default Property:		log.message.timestamp.type
 		// Importance:					medium
 		"message.timestamp.type": {
-			Type:        schema.TypeString,
-			Required:    false,
-			ForceNew:    true,
-			Description: "Define whether the timestamp in the message is message create time or log append time. The value should be either `CreateTime` or `LogAppendTime`",
+			Type:         schema.TypeString,
+			Required:     false,
+			ForceNew:     true,
+			Description:  "Define whether the timestamp in the message is message create time or log append time. The value should be either `CreateTime` or `LogAppendTime`",
 			ValidateFunc: ValidateMessageTimestampType,
 		},
 
@@ -709,18 +708,17 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 						  a last resort, even though doing so may result in data loss.`,
 		},
 
-
 		// message.downconversion.enable
-		// This configuration controls whether down-conversion of message formats is enabled to 
-		// satisfy consume requests. When set to false, broker will not perform down-conversion 
-		// for consumers expecting an older message format. The broker responds with 
-		// UNSUPPORTED_VERSION error for consume requests from such older clients. This 
-		// configurationdoes not apply to any message format conversion that might be 
+		// This configuration controls whether down-conversion of message formats is enabled to
+		// satisfy consume requests. When set to false, broker will not perform down-conversion
+		// for consumers expecting an older message format. The broker responds with
+		// UNSUPPORTED_VERSION error for consume requests from such older clients. This
+		// configurationdoes not apply to any message format conversion that might be
 		// required for replication to followers.
-		// 
+		//
 		// Type:	boolean
 		// Default:	true
-		// Valid Values:	
+		// Valid Values:
 		// Server Default Property:	log.message.downconversion.enable
 		// Importance:	low
 		"message.downconversion.enable": {
@@ -732,45 +730,41 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 						  for consumers expecting an older message format. The broker responds with UNSUPPORTED_VERSION 
 						  error for consume requests from such older clients. This configurationdoes not 
 						  apply to any message format conversion that might be required for replication to followers.`,
-
 		},
 	}
 }
 
 func ValidateKafkaCleanupPolicy(val interface{}, key string) (warns []string, errs []error) {
 	if val != "compact" && val != "delete" {
-		return ["Error: cleanup.policy value is incorrect. Must be one of [compact, delete]"], nil
+		return []string{"Error: cleanup.policy value is incorrect. Must be one of [compact, delete]"}, []error{nil}
 	}
 	return nil, nil
 }
 
 func ValidateKafkaCompressionType(val interface{}, key string) (warns []string, errs []error) {
 	if val != "uncompressed" && val != "zstd" && val != "lz4" && val != "snappy" && val != "gzip" && val != "producer" {
-		return ["Error: compression.type value is incorrect. Must be one of [\"uncompressed\", \"zstd\", \"lz4\", \"snappy\", \"gzip\", \"producer\"]"], nil
-	} 
+		return []string{"Error: compression.type value is incorrect. Must be one of [\"uncompressed\", \"zstd\", \"lz4\", \"snappy\", \"gzip\", \"producer\"]"}, []error{nil}
+	}
 	return nil, nil
 }
 
 func ValidateMessageFormatVersion(val interface{}, key string) (warns []string, errs []error) {
-	validVersions := ["0.8.0", "0.8.1", "0.8.2", "0.9.0", "0.10.0-IV0", "0.10.0-IV1",
-					  "0.10.1-IV0", "0.10.1-IV1", "0.10.1-IV2", "0.10.2-IV0", "0.11.0-IV0",
-					  "0.11.0-IV1", "0.11.0-IV2", "1.0-IV0", "1.1-IV0", "2.0-IV0", "2.0-IV1",
-					  "2.1-IV0", "2.1-IV1", "2.1-IV2", "2.2-IV0", "2.2-IV1", "2.3-IV0", "2.3-IV1",
-					  "2.4-IV0", "2.4-IV1", "2.5-IV0", "2.6-IV0", "2.7-IV0", "2.7-IV1", "2.7-IV2"] 
+	validVersions := []string{"0.8.0", "0.8.1", "0.8.2", "0.9.0", "0.10.0-IV0", "0.10.0-IV1",
+		"0.10.1-IV0", "0.10.1-IV1", "0.10.1-IV2", "0.10.2-IV0", "0.11.0-IV0",
+		"0.11.0-IV1", "0.11.0-IV2", "1.0-IV0", "1.1-IV0", "2.0-IV0", "2.0-IV1",
+		"2.1-IV0", "2.1-IV1", "2.1-IV2", "2.2-IV0", "2.2-IV1", "2.3-IV0", "2.3-IV1",
+		"2.4-IV0", "2.4-IV1", "2.5-IV0", "2.6-IV0", "2.7-IV0", "2.7-IV1", "2.7-IV2"}
 	for _, knownVersion := range validVersions {
 		if val == knownVersion {
-			return true
+			return []string{"Error: known-version value is incorrect."}, []error{nil}
 		}
-	}
-	return false
-}
-
-func ValidateMessageTimestampType(val interface{}, key string) (warns []string, errs []error) {
-	if val != "CreateTime" val != "LogAppendTime" {
-		return ["Error: message.timestamp.type value is incorrect. Must be one of [\"CreateTime\", \"LogAppendTime\"]"], nil
 	}
 	return nil, nil
 }
 
-
-
+func ValidateMessageTimestampType(val interface{}, key string) (warns []string, errs []error) {
+	if val != "CreateTime" && val != "LogAppendTime" {
+		return []string{"Error: message.timestamp.type value is incorrect. Must be one of [\"CreateTime\", \"LogAppendTime\"]"}, []error{nil}
+	}
+	return nil, nil
+}
