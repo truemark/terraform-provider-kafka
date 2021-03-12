@@ -10,6 +10,7 @@ import (
 )
 
 // ### ./bin/kafka-topics.sh
+//
 // Create, delete, describe, or change a topic.
 // Option                                   Description
 // ------                                   -----------
@@ -39,7 +40,7 @@ import (
 //                                            topic being created or altered. The
 //                                            following is a list of valid
 //                                            configurations:
-
+//
 //                                          	cleanup.policy
 //                                          	compression.type
 //                                          	delete.retention.ms
@@ -88,7 +89,7 @@ import (
 //                                            list or describe command. The
 //                                            internal topics will be listed by
 //                                            default
-
+//
 // --force                                  Suppress console prompts
 // --help                                   Print usage information.
 // --if-exists                              if set when altering or deleting or
@@ -140,17 +141,15 @@ import (
 //                                            the zookeeper connection in the form
 //                                            host:port. Multiple hosts can be
 //                                            given to allow fail-over.
-
+//
 func TopicCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+
 	// config := sarama.NewConfig()
 	// client := sarama.NewClient(config)
-
 	// clusterAdmin := sarama.NewClusterAdminFromClient(client)
 	// clusterAdmin.CreateTopic()
-
 	// type CreateTopicsRequest struct {
 	// 	Version int16
-
 	// 	TopicDetails map[string]*TopicDetail
 	// 	Timeout      time.Duration
 	// 	ValidateOnly bool
@@ -187,24 +186,23 @@ func ResourceKafkaTopic() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"num_partitions": {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"replication_factor": {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"replica_assignment": {
 				Type:     schema.TypeList,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"config_entries": {
-				// Type: schema.TypeMap,
-				// Required: true,
-				// ForceNew: true,
-
 				Type:        schema.TypeSet,
 				Optional:    true,
 				ForceNew:    true,
@@ -230,12 +228,16 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[compact, delete]
 		// Server Default Property:		log.cleanup.policy
 		// Importance:					medium
-		"cleanup.policy": {
-			Type:         schema.TypeList,
-			Required:     false,
-			ForceNew:     true,
-			Description:  "A string that is either \"delete\" or \"compact\" or both. This string designates the retention policy to use on old log segments. The default policy (\"delete\") will discard old segments when their retention time or size limit has been reached. The \"compact\" setting will enable log compaction on the topic.",
-			ValidateFunc: ValidateKafkaCleanupPolicy,
+		"cleanup_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			Description: "A string that is either \"delete\" or \"compact\" or both. This string designates the retention policy to use on old log segments. The default policy (\"delete\") will discard old segments when their retention time or size limit has been reached. The \"compact\" setting will enable log compaction on the topic.",
+			// ValidateFunc: ValidateKafkaCleanupPolicy,
+			// TODO: Add the validator back in when TF Supports it.
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 		},
 
 		// compression.type
@@ -249,9 +251,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[uncompressed, zstd, lz4, snappy, gzip, producer]
 		// Server Default Property:		compression.type
 		// Importance:					medium
-		"compression.type": {
+		"compression_type": {
 			Type:         schema.TypeString,
-			Required:     false,
+			Optional:     true,
 			ForceNew:     true,
 			Description:  "Specify the final compression type for a given topic. This configuration accepts the standard compression codecs ('gzip', 'snappy', 'lz4', 'zstd'). It additionally accepts 'uncompressed' which is equivalent to no compression; and 'producer' which means retain the original compression codec set by the producer.",
 			ValidateFunc: ValidateKafkaCompressionType,
@@ -269,9 +271,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.cleaner.delete.retention.ms
 		// Importance:					medium
-		"delete.retention.ms": {
+		"delete_retention_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The amount of time to retain delete tombstone markers for log compacted topics. This setting also gives a bound on the time in which a consumer must complete a read if they begin from offset 0 to ensure that they get a valid snapshot of the final stage (otherwise delete tombstones may be collected before they complete their scan).",
 		},
@@ -284,9 +286,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.segment.delete.delay.ms
 		// Importance:					medium
-		"file.delete.delay.ms": {
+		"file_delete_delay_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The time to wait before deleting a file from the filesystem",
 		},
@@ -305,9 +307,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:			[0,...]
 		// Server Default Property:	log.flush.interval.messages
 		// Importance:				medium
-		"flush.messages": {
+		"flush_messages": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "This setting allows specifying an interval at which we will force an fsync of data written to the log. For example if this was set to 1 we would fsync after every message; if it were 5 we would fsync after every five messages. In general we recommend you not set this and use replication for durability and allow the operating system's background flush capabilities as it is more efficient. This setting can be overridden on a per-topic basis (see the per-topic configuration  section).",
 		},
@@ -323,9 +325,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:	 	log.flush.interval.ms
 		// Importance:					medium
-		"flush.ms": {
+		"flush_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "This setting allows specifying a time interval at which we will force an fsync of data written to the log. For example if this was set to 1000 we would fsync after 1000 ms had passed. In general we recommend you not set this and use replication for durability and allow the operating system's background flush capabilities as it is more efficient.",
 		},
@@ -342,11 +344,14 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:			[partitionId]:[brokerId],[partitionId]:[brokerId],...
 		// Server Default Property:	follower.replication.throttled.replicas
 		// Importance:				medium
-		"follower.replication.throttled.replicas": {
+		"follower_replication_throttled_replicas": {
 			Type:        schema.TypeList,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "A list of replicas for which log replication should be throttled on the follower side.",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 		},
 
 		// index.interval.bytes
@@ -360,9 +365,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:			[0,...]
 		// Server Default Property:	log.index.interval.bytes
 		// Importance:				medium
-		"index.interval.bytes": {
+		"index_interval_bytes": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "This setting controls how frequently Kafka adds an index entry to its offset index. The default setting ensures that we index a message roughly every 4096 bytes. More indexing allows reads to jump closer to the exact position in the log but makes the index larger. You probably don't need to change this.",
 		},
@@ -381,11 +386,14 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:			[partitionId]:[brokerId],[partitionId]:[brokerId],...
 		// Server Default Property:	leader.replication.throttled.replicas
 		// Importance:				medium
-		"leader.replication.throttled.replicas": {
+		"leader_replication_throttled_replicas": {
 			Type:        schema.TypeList,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "A list of replicas for which log replication should be throttled on the leader side. The list should describe a set of replicas in the form",
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 		},
 
 		// max.compaction.lag.ms
@@ -397,9 +405,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[1,...]
 		// Server Default Property:		log.cleaner.max.compaction.lag.ms
 		// Importance:					medium
-		"max.compaction.lag.ms": {
+		"max_compaction_lag_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The maximum time a message will remain ineligible for compaction in the log. Only applicable for logs that are being compacted.",
 		},
@@ -417,9 +425,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		message.max.bytes
 		// Importance:					medium
-		"max.message.bytes": {
+		"max_message_bytes": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The largest record batch size allowed by Kafka (after compression if compression is enabled). If this is increased and there are consumers older than 0.10.2, the consumers' fetch size must also be increased so that they can fetch record batches this large. In the latest message format version, records are always grouped into batches for efficiency. In previous message format versions, uncompressed records are not grouped into batches and this limit only applies to a single record in that case.",
 		},
@@ -444,9 +452,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		//
 		// Server Default Property:		log.message.format.version
 		// Importance:					medium
-		"message.format.version": {
+		"message_format_version": {
 			Type:         schema.TypeString,
-			Required:     false,
+			Optional:     true,
 			ForceNew:     true,
 			Description:  "Specify the message format version the broker will use to append messages to the logs. The value should be a valid ApiVersion. Some examples are: 0.8.2, 0.9.0.0, 0.10.0, check ApiVersion for more details. By setting a particular message format version, the user is certifying that all the existing messages on disk are smaller or equal than the specified version. Setting this value incorrectly will cause consumers with older versions to break as they will receive messages with a format that they don't understand.",
 			ValidateFunc: ValidateMessageFormatVersion,
@@ -463,9 +471,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.message.timestamp.difference.max.ms
 		// Importance:					medium
-		"message.timestamp.difference.max.ms": {
+		"message_timestamp_difference_max_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The maximum difference allowed between the timestamp when a broker receives a message and the timestamp specified in the message. If message.timestamp.type=CreateTime, a message will be rejected if the difference in timestamp exceeds this threshold. This configuration is ignored if message.timestamp.type=LogAppendTime.",
 		},
@@ -479,9 +487,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[CreateTime, LogAppendTime]
 		// Server Default Property:		log.message.timestamp.type
 		// Importance:					medium
-		"message.timestamp.type": {
+		"message_timestamp_type": {
 			Type:         schema.TypeString,
-			Required:     false,
+			Optional:     true,
 			ForceNew:     true,
 			Description:  "Define whether the timestamp in the message is message create time or log append time. The value should be either `CreateTime` or `LogAppendTime`",
 			ValidateFunc: ValidateMessageTimestampType,
@@ -504,9 +512,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...,1]
 		// Server Default Property:		log.cleaner.min.cleanable.ratio
 		// Importance:					medium
-		"min.cleanable.dirty.ratio": {
+		"min_cleanable_dirty_ratio": {
 			Type:        schema.TypeFloat,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "This configuration controls how frequently the log compactor will attempt to clean the log (assuming log compaction is enabled). By default we will avoid cleaning a log where more than 50% of the log has been compacted. This ratio bounds the maximum space wasted in the log by duplicates (at 50% at most 50% of the log could be duplicates). A higher ratio will mean fewer, more efficient cleanings but will mean more wasted space in the log. If the max.compaction.lag.ms or the min.compaction.lag.ms configurations are also specified, then the log compactor considers the log to be eligible for compaction as soon as either: (i) the dirty ratio threshold has been met and the log has had dirty (uncompacted) records for at least the min.compaction.lag.ms duration, or (ii) if the log has had dirty (uncompacted) records for at most the max.compaction.lag.ms period.",
 		},
@@ -520,9 +528,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.cleaner.min.compaction.lag.ms
 		// Importance:					medium
-		"min.compaction.lag.ms": {
+		"min_compaction_lag_ms": {
 			Type:        schema.TypeInt,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "The minimum time a message will remain uncompacted in the log. Only applicable for logs that are being compacted.",
 		},
@@ -543,9 +551,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[1,...]
 		// Server Default Property:		min.insync.replicas
 		// Importance:					medium
-		"min.insync.replicas": {
+		"min_insync_replicas": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `When a producer sets acks to \"all\" (or \"-1\"), this configuration specifies the minimum 
 						   number of replicas that must acknowledge a write for the write to be considered successful. 
@@ -568,7 +576,7 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Importance:					medium
 		"preallocate": {
 			Type:        schema.TypeBool,
-			Required:    false,
+			Optional:    true,
 			ForceNew:    true,
 			Description: "True if we should preallocate the file on disk when creating a new log segment.",
 		},
@@ -585,9 +593,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:
 		// Server Default Property:		log.retention.bytes
 		// Importance:					medium
-		"retention.bytes": {
+		"retention_bytes": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls the maximum size a partition (which consists of log segments)
 						  can grow to before we will discard old log segments to free up space if we are using
@@ -607,9 +615,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[-1,...]
 		// Server Default Property:		log.retention.ms
 		// Importance:					medium
-		"retention.ms": {
+		"retention_ms": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls the maximum time we will retain a log before we will discard
 						  old log segments to free up space if we are using the "delete" retention policy. This
@@ -627,9 +635,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[14,...]
 		// Server Default Property:		log.segment.bytes
 		// Importance:					medium
-		"segment.bytes": {
+		"segment_bytes": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls the segment file size for the log. Retention and cleaning is
 						  always done a file at a time so a larger segment size means fewer files but less granular
@@ -646,9 +654,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.index.size.max.bytes
 		// Importance:					medium
-		"segment.index.bytes": {
+		"segment_index_bytes": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls the size of the index that maps offsets to file positions.
 						  We preallocate this index file and shrink it only after log rolls. You generally should
@@ -664,9 +672,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[0,...]
 		// Server Default Property:		log.roll.jitter.ms
 		// Importance:					medium
-		"segment.jitter.ms": {
+		"segment_jitter_ms": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `The maximum random jitter subtracted from the scheduled segment roll time to avoid
 						  thundering herds of segment rolling`,
@@ -682,9 +690,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:				[1,...]
 		// Server Default Property:		log.roll.ms
 		// Importance:					medium
-		"segment.ms": {
+		"segment_ms": {
 			Type:     schema.TypeInt,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls the period of time after which Kafka will force the log
 						  to roll even if the segment file isn't full to ensure that retention can delete or
@@ -700,9 +708,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:
 		// Server Default Property:		unclean.leader.election.enable
 		// Importance:					medium
-		"unclean.leader.election.enable": {
+		"unclean_leader_election_enable": {
 			Type:     schema.TypeBool,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `Indicates whether to enable replicas not in the ISR set to be elected as leader as
 						  a last resort, even though doing so may result in data loss.`,
@@ -721,9 +729,9 @@ func SchemaKafkaTopicConfigEntries() map[string]*schema.Schema {
 		// Valid Values:
 		// Server Default Property:	log.message.downconversion.enable
 		// Importance:	low
-		"message.downconversion.enable": {
+		"message_downconversion_enable": {
 			Type:     schema.TypeBool,
-			Required: false,
+			Optional: true,
 			ForceNew: true,
 			Description: `This configuration controls whether down-conversion of message formats is enabled 
 						  to satisfy consume requests. When set to false, broker will not perform down-conversion 

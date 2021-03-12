@@ -15,6 +15,10 @@ func Provider() *schema.Provider {
 			"bootstrap_servers": {
 				Type:     schema.TypeList,
 				Optional: false,
+				Required: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 		ConfigureContextFunc: providerConfigure,
@@ -27,7 +31,7 @@ func Provider() *schema.Provider {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	// TODO: log.Printf("[INFO] Initializing ConfluentCloud client")
-	bootstrapServers := d.Get("bootstrap_servers").(string)
+	bootstrapServers := d.Get("bootstrap_servers").([]interface{})
 
 	// err := resource.RetryContext(ctx, 30*time.Minute, func() *resource.RetryError {
 	// })

@@ -1,11 +1,12 @@
 package kafka_topic
 
 import (
-
 	// clientapi "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 
 	"context"
 	"errors"
+	"log"
+	"strconv"
 
 	sarama "github.com/Shopify/sarama"
 
@@ -186,17 +187,37 @@ import (
 // to explicitly specify -- authorizer-properties zookeeper.set.acl=true
 
 func ACLCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	log.Printf("IN ACLCreate()\n")
 
-	brokers := d.Get("bootstrap_servers").([]string)
+	log.Println("ResourceData")
+	log.Println(d)
+	log.Println("meta")
+	log.Println(meta)
+	log.Println("ctx")
+	log.Println(ctx)
 
-	// principle := d.Get("principle")
+	brokers := meta.([]interface{})
+	var brokersList []string
+	if brokers != nil {
+		for _, b := range brokers {
+			brokersList = append(brokersList, b.(string))
+			log.Println("broker: ", b.(string))
+		}
+	}
+	principal := d.Get("principal")
 	host := d.Get("host").(string)
 	operationStr := d.Get("operation").(string)
 	permissionTypeStr := d.Get("permission").(string)
-	resource := d.Get("resource").(map[string]interface{})
-	resourceTypeStr := resource["resource_type"].(string)
-	resourceName := resource["resource_name"].(string)
-	resourcePatternTypeStr := resource["resource_pattern_type"].(string)
+
+	resource, ok := d.GetOk("resource")
+
+	log.Println("ok: " + strconv.FormatBool(ok))
+	log.Println("resource")
+	log.Println(resource)
+
+	resourceTypeStr := ""        // resource["resource_type"].(string)
+	resourceName := ""           // resource["resource_name"].(string)
+	resourcePatternTypeStr := "" // resource["resource_pattern_type"].(string)
 
 	operation, err := operationToOpCode(operationStr)
 	permission, err := permissionToOpCode(permissionTypeStr)
@@ -212,21 +233,31 @@ func ACLCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) di
 		ResourcePatternType: sarama.AclResourcePatternType(patternOp),
 	}
 	aclStruct := sarama.Acl{
+		Principal:      principal.(string),
 		Host:           host,
 		Operation:      sarama.AclOperation(operation),
 		PermissionType: sarama.AclPermissionType(permission),
 	}
 
+	log.Println("Building config")
 	config := sarama.NewConfig()
-	client, err := sarama.NewClient(brokers, config)
-	clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+	// client, err := sarama.NewClient(brokersList, config)
+	// if err != nil {
+	// 	log.Fatal("Error occurred building client. Error was: %s\n", err.Error())
+	// }
+	clusterAdmin, err := sarama.NewClusterAdmin(brokersList, config)
+	if err != nil {
+		log.Fatal("Error occurred building admin client. Error was: %s\n", err.Error())
+	}
+
+	log.Println("Creating ACL via Admin-Client")
 	err = clusterAdmin.CreateACL(resourceStruct, aclStruct)
 	if err != nil {
-		// t.Fatal(err)
+		log.Fatal("Error occurred calling CreateACL(). Error was: %s\n", err.Error())
 	}
 	err = clusterAdmin.Close()
 	if err != nil {
-		// t.Fatal(err)
+		log.Fatal("Error occurred closing out client connection. Error was: %s\n", err.Error())
 	}
 
 	return nil
@@ -305,19 +336,8 @@ func ResourceKafkaACL() *schema.Resource {
 
 func ValidateOperationType(val interface{}, key string) (warns []string, errs []error) {
 	validOperations := []string{
-		"unknown",
-		"any",
-		"all",
-		"read",
-		"write",
-		"create",
-		"delete",
-		"alter",
-		"describe",
-		"cluster_action",
-		"describe_configs",
-		"alter_configs",
-		"idempotent_write"}
+		"unknown", "any", "all", "read", "write", "create", "delete",
+		"alter", "describe", "cluster_action", "describe_configs", "alter_configs", "idempotent_write"}
 	for _, operation := range validOperations {
 		if val == operation {
 			return nil, nil
@@ -337,15 +357,18 @@ func ValidatePermissionType(val interface{}, key string) (warns []string, errs [
 }
 
 func ValidateResourceType(val interface{}, key string) (warns []string, errs []error) {
+	log.Println("into ValidateResourceType()")
 	validResourceTypes := []string{"unknown", "any", "topic", "group",
 		"cluster", "transaction_id", "delegation_token"}
-
 	for _, resource := range validResourceTypes {
+		log.Println("Resource: ", resource)
+		log.Println("Val: ", val)
 		if val == resource {
-			return nil, nil
+			log.Println("val and resource match")
+			return []string{}, []error{}
 		}
 	}
-	return []string{"Error: resource.type value is incorrect. Must be one of [\"unknown\", \"any\", \"topic\", \"group\", \"cluster\", \"transaction_id\", \"delegation_token\"]"}, []error{nil}
+	return []string{"Error: resource.type value is incorrect. Must be one of [\"unknown\", \"any\", \"topic\", \"group\", \"cluster\", \"transaction_id\", \"delegation_token\"]"}, []error{}
 }
 
 func ValidateResourcePatternType(val interface{}, key string) (warns []string, errs []error) {
